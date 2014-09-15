@@ -16,16 +16,27 @@ The purpose of this lab is to understand subroutines. We will also us call by va
 
 ###Pseudo Code
 o	Type encrypted message in ROM
+
 o	Type key in ROM
+
 o	Set apart RAM storage for results
+
 o	Set up registers as pointers for encryption, decryption, and the key
+
 o	Sub 1
+
 -	Read in message
+
 -	Read in Key
+
 -	Call Sub 2
+
 -	End of message jump
+
 o	Sub 2
+
 -	XOR key with message
+
 o	End 
 
 
