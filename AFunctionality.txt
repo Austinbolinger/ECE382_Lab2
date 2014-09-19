@@ -1,0 +1,132 @@
+;-------------------------------------------------------------------------------
+; MSP430 Assembler Code Template for use with TI Code Composer Studio
+;
+; Lab 1 - Simple Calculator
+; C2C Austin Bolinger, USAF / 15 Sep 14 / 17 Sep 14
+; ECE 382
+;
+; Documentation: Help received from Dr. York on how to approach A functionality
+;				Also, on how to do a stopper at the end of the message
+;				Help received from Capt Trimble on how to handle my xor function
+;
+;-------------------------------------------------------------------------------
+            .cdecls C,LIST,"msp430.h"       ; Include device header file
+
+;-------------------------------------------------------------------------------
+encryptedPointer:	.equ		r5		; PC for storing location of ROM for message
+keyPointer:			.equ		r6		; PC for storing location of ROM for key
+decryptedPointer:	.equ		r7		; PC for storing location of RAM for end message
+messageLength:		.equ		r8		; Counter for length of message
+letter:				.equ		r9		; stores byte that is at enctyptedPointer location
+keyLength:			.equ		r10		; Counter for length of key
+keyOriginalLength:	.equ		r11		; length of key
+keyCode:			.equ		r12		; stores byte that is at keyPointer location
+
+            .data
+decrypted:	.space	100						; 100 spaces for answers for later
+            .text                           ; Assemble into program memory
+            .retain                         ; Override ELF conditional linking
+                                            ; and retain current section
+            .retainrefs                     ; Additionally retain any sections
+                                            ; that have references to current
+                                            ; section
+;encrypted:	.byte	0xef,0xc3,0xc2,0xcb,0xde,0xcd,0xd8,0xd9,0xc0,0xcd,0xd8,0xc5,0xc3,0xc2,0xdf,0x8d,0x8c,0x8c,0xf5,0xc3,0xd9,0x8c,0xc8,0xc9,0xcf,0xde,0xd5,0xdc,0xd8,0xc9,0xc8,0x8c,0xd8,0xc4,0xc9,0x8c,0xe9,0xef,0xe9,0x9f,0x94,0x9e,0x8c,0xc4,0xc5,0xc8,0xc8,0xc9,0xc2,0x8c,0xc1,0xc9,0xdf,0xdf,0xcd,0xcb,0xc9,0x8c,0xcd,0xc2,0xc8,0x8c,0xcd,0xcf,0xc4,0xc5,0xc9,0xda,0xc9,0xc8,0x8c,0xde,0xc9,0xdd,0xd9,0xc5,0xde,0xc9,0xc8,0x8c,0xca,0xd9,0xc2,0xcf,0xd8,0xc5,0xc3,0xc2,0xcd,0xc0,0xc5,0xd8,0xd5,0x8f
+;encrypted:	.byte	0xf8,0xb7,0x46,0x8c,0xb2,0x46,0xdf,0xac,0x42,0xcb,0xba,0x03,0xc7,0xba,0x5a,0x8c,0xb3,0x46,0xc2,0xb8,0x57,0xc4,0xff,0x4a,0xdf,0xff,0x12,0x9a,0xff,0x41,0xc5,0xab,0x50,0x82,0xff,0x03,0xe5,0xab,0x03,0xc3,0xb1,0x4f,0xd5,0xff,0x40,0xc3,0xb1,0x57,0xcd,0xb6,0x4d,0xdf,0xff,0x4f,0xc9,0xab,0x57,0xc9,0xad,0x50,0x80,0xff,0x53,0xc9,0xad,0x4a,0xc3,0xbb,0x50,0x80,0xff,0x42,0xc2,0xbb,0x03,0xdf,0xaf,0x42,0xcf,0xba,0x50,0x8f
+encrypted:	.byte	0x35,0xdf,0x00,0xca,0x5d,0x9e,0x3d,0xdb,0x12,0xca,0x5d,0x9e,0x32,0xc8,0x16,0xcc,0x12,0xd9,0x16,0x90,0x53,0xf8,0x01,0xd7,0x16,0xd0,0x17,0xd2,0x0a,0x90,0x53,0xf9,0x1c,0xd1,0x17,0x90,0x53,0xf9,0x1c,0xd1,0x17,0x90
+
+endMessage: .byte	0x00					; denotes the end of message
+;key:		.byte	0xac
+;key:		.byte	0xac,0xdf,0x23
+key:		.byte	0x73,0xBE
+endKey:		.byte	0x00					; denotes the end of key
+;-------------------------------------------------------------------------------
+RESET       mov.w   #__STACK_END,SP         ; Initialize stackpointer
+StopWDT     mov.w   #WDTPW|WDTHOLD,&WDTCTL  ; Stop watchdog timer
+
+;-------------------------------------------------------------------------------
+                                            ; Main loop here
+;-------------------------------------------------------------------------------
+Start
+	mov		#encrypted, encryptedPointer	; start the PC for original message
+	mov		#key, keyPointer				; start the PC for the key
+	mov		#decrypted, decryptedPointer	; start the PC for result storage
+	mov		#endMessage, messageLength
+	sub		#encrypted, messageLength		; find the length of message
+	mov		#endKey, keyOriginalLength
+	sub		#key,	keyOriginalLength
+;	sub		#1, keyOriginalLength
+	mov		keyOriginalLength, keyLength
+	mov.b	@encryptedPointer, letter		; move byte to letter register
+
+countDown									; loop for message length
+	call    #decryptMessage					; call subroutine
+
+	inc		keyPointer
+	dec.b	keyLength
+	jnz		continue
+	mov		keyOriginalLength, keyLength
+	mov		#key, keyPointer
+continue
+	dec.b	messageLength
+	jnz		countDown
+
+forever:    jmp     forever					; end
+
+;-------------------------------------------------------------------------------
+                                            ; Subroutines
+;-------------------------------------------------------------------------------
+
+;-------------------------------------------------------------------------------
+;Subroutine Name: decryptMessage
+;Author: Austin Bolinger
+;Function: Decrypts a string of bytes and stores the result in memory.  Accepts
+;           the address of the encrypted message, address of the key, and address
+;           of the decrypted message (pass-by-reference).  Accepts the length of
+;           the message by value.  Uses the decryptCharacter subroutine to decrypt
+;           each byte of the message.  Stores theresults to the decrypted message
+;           location.
+;Inputs: encryptedPointer, keyPointer, letter, decryptedPointer
+;Outputs: letter, decryptedPointer
+;Registers destroyed: letter(r9),decryptedPointer(r7),encryptedPointer(r5),keyPointer(r6)
+;-------------------------------------------------------------------------------
+
+decryptMessage:
+
+
+	call	#decryptCharacter
+	mov.b	letter,0(decryptedPointer)	; stores new letters to result(RAM)
+	inc		encryptedPointer
+	mov.b	@encryptedPointer, letter
+;	inc		keyPointer
+	inc		decryptedPointer
+            ret
+
+;-------------------------------------------------------------------------------
+;Subroutine Name: decryptCharacter
+;Author:Austin Bolinger
+;Function: Decrypts a byte of data by XORing it with a key byte.  Returns the
+;           decrypted byte in the same register the encrypted byte was passed in.
+;           Expects both the encrypted data and key to be passed by value.
+;Inputs: decryptedPointer, letter
+;Outputs:letter, decryptedPointer
+;Registers destroyed:letter(r9)
+;-------------------------------------------------------------------------------
+
+decryptCharacter:
+
+	xor.b	@keyPointer, letter			; changes letter to message byte
+
+            ret
+
+
+;-------------------------------------------------------------------------------
+;           Stack Pointer definition
+;-------------------------------------------------------------------------------
+            .global __STACK_END
+            .sect 	.stack
+
+;-------------------------------------------------------------------------------
+;           Interrupt Vectors
+;-------------------------------------------------------------------------------
+            .sect   ".reset"                ; MSP430 RESET Vector
+            .short  RESET
