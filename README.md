@@ -95,7 +95,7 @@ When debugging the A functionality code, I spent way too much time not understan
 https://github.com/Austinbolinger/ECE382_Lab2/blob/master/AFunctionality.txt
 
 #Results
-I showed my results to Dr. York for required and B functionality in class on lesson 11. The next day I showed my A functionality to Capt Trimble. My answers are: Congratulations!  You decrypted the ECE382 hidden message and achieved required functionality#; The message key length is 16 bits  It only contains letters, periods, and spaces#; and Fast. Neat.  Average. Friendly. Good. Good.
+I showed my results to Dr. York for required and B functionality in class on lesson 11. Later that day before COB, I showed my A functionality to Capt Trimble. My answers are: Congratulations!  You decrypted the ECE382 hidden message and achieved required functionality#; The message key length is 16 bits  It only contains letters, periods, and spaces#; and Fast. Neat.  Average. Friendly. Good. Good.
 
 #Documentation
 Capt Trimble helped me understand the xor function. In the process I was able to see that my actual error was using the wrong values.
